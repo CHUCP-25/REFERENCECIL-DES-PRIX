@@ -490,6 +490,26 @@
             }, 5000);
         }
 
+        // Fonction utilitaire pour convertir en chaîne de caractères
+        function safeString(value) {
+            if (value === null || value === undefined) return '';
+            return String(value);
+        }
+
+        // Fonction utilitaire pour convertir en nombre
+        function safeNumber(value) {
+            if (value === null || value === undefined) return 0;
+            const num = parseFloat(value);
+            return isNaN(num) ? 0 : num;
+        }
+
+        // Fonction de tri sécurisée
+        function safeCompare(a, b) {
+            const strA = safeString(a).toLowerCase();
+            const strB = safeString(b).toLowerCase();
+            return strA.localeCompare(strB);
+        }
+
         // Charger les données depuis Firebase
         function loadDataFromFirebase() {
             showStatus('Chargement des données depuis Firebase...', true);
@@ -505,24 +525,29 @@
                         tableData.push(data);
                     });
                     
-                    // Trier les données côté client pour éviter l'erreur d'index Firebase
+                    // Trier les données côté client avec gestion des erreurs
                     tableData.sort((a, b) => {
-                        // Par exercice budgétaire (desc)
-                        if (a.exercice_budgetaire !== b.exercice_budgetaire) {
-                            if (!a.exercice_budgetaire) return 1;
-                            if (!b.exercice_budgetaire) return -1;
-                            return b.exercice_budgetaire.localeCompare(a.exercice_budgetaire);
+                        try {
+                            // Par exercice budgétaire (desc)
+                            if (a.exercice_budgetaire !== b.exercice_budgetaire) {
+                                if (!a.exercice_budgetaire) return 1;
+                                if (!b.exercice_budgetaire) return -1;
+                                return safeCompare(b.exercice_budgetaire, a.exercice_budgetaire);
+                            }
+                            // Par DAO (desc)
+                            if (a.dao !== b.dao) {
+                                if (!a.dao) return 1;
+                                if (!b.dao) return -1;
+                                return safeCompare(b.dao, a.dao);
+                            }
+                            // Par numéro d'article (asc)
+                            const numA = safeNumber(a.article);
+                            const numB = safeNumber(b.article);
+                            return numA - numB;
+                        } catch (error) {
+                            console.error("Erreur lors du tri:", error);
+                            return 0;
                         }
-                        // Par DAO (desc)
-                        if (a.dao !== b.dao) {
-                            if (!a.dao) return 1;
-                            if (!b.dao) return -1;
-                            return b.dao.localeCompare(a.dao);
-                        }
-                        // Par numéro d'article (asc)
-                        if (!a.article) return 1;
-                        if (!b.article) return -1;
-                        return parseInt(a.article) - parseInt(b.article);
                     });
                     
                     filteredData = [...tableData];
@@ -558,17 +583,17 @@
 
         // Filtrer le tableau
         function filterTable() {
-            const searchTerm = searchInput.value.toLowerCase();
+            const searchTerm = safeString(searchInput.value).toLowerCase();
             
             if (searchTerm === '') {
                 filteredData = [...tableData];
             } else {
                 filteredData = tableData.filter(row => {
                     return (
-                        (row.designation && row.designation.toLowerCase().includes(searchTerm)) ||
-                        (row.exercice_budgetaire && row.exercice_budgetaire.toLowerCase().includes(searchTerm)) ||
-                        (row.dao && row.dao.toLowerCase().includes(searchTerm)) ||
-                        (row.objet && row.objet.toLowerCase().includes(searchTerm))
+                        safeString(row.designation).toLowerCase().includes(searchTerm) ||
+                        safeString(row.exercice_budgetaire).toLowerCase().includes(searchTerm) ||
+                        safeString(row.dao).toLowerCase().includes(searchTerm) ||
+                        safeString(row.objet).toLowerCase().includes(searchTerm)
                     );
                 });
             }
@@ -591,18 +616,18 @@
             dataToShow.forEach((row, index) => {
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
-                    <td class="col-ligne-budgetaire">${row.ligne_budgetaire || ''}</td>
-                    <td>${row.exercice_budgetaire || ''}</td>
-                    <td class="col-dao">${row.dao || ''}</td>
-                    <td class="col-objet">${row.objet || ''}</td>
-                    <td>${row.article || ''}</td>
-                    <td class="col-designation">${row.designation || ''}</td>
-                    <td class="col-unite-mesure">${row.unite_mesure || ''}</td>
-                    <td>${row.quantite_commandee || ''}</td>
-                    <td>${row.prix_unitaire_mo || ''}</td>
-                    <td class="col-tva">${row.taux_tva ? row.taux_tva + '%' : ''}</td>
-                    <td class="col-soumissionnaire">${row.soumissionnaire || ''}</td>
-                    <td>${row.prix_unitaire_ht || ''}</td>
+                    <td class="col-ligne-budgetaire">${safeString(row.ligne_budgetaire)}</td>
+                    <td>${safeString(row.exercice_budgetaire)}</td>
+                    <td class="col-dao">${safeString(row.dao)}</td>
+                    <td class="col-objet">${safeString(row.objet)}</td>
+                    <td>${safeString(row.article)}</td>
+                    <td class="col-designation">${safeString(row.designation)}</td>
+                    <td class="col-unite-mesure">${safeString(row.unite_mesure)}</td>
+                    <td>${safeString(row.quantite_commandee)}</td>
+                    <td>${safeString(row.prix_unitaire_mo)}</td>
+                    <td class="col-tva">${row.taux_tva ? safeString(row.taux_tva) + '%' : ''}</td>
+                    <td class="col-soumissionnaire">${safeString(row.soumissionnaire)}</td>
+                    <td>${safeString(row.prix_unitaire_ht)}</td>
                     <td class="col-actions">
                         <button class="btn btn-warning edit-row-btn" data-id="${row.id}">Modifier</button>
                         <button class="btn btn-danger delete-row-btn" data-id="${row.id}">Supprimer</button>
@@ -702,18 +727,18 @@
             // Remplacer la ligne par des champs d'édition
             const tr = e.target.closest('tr');
             tr.innerHTML = `
-                <td class="col-ligne-budgetaire"><input type="text" name="ligne_budgetaire" value="${row.ligne_budgetaire || ''}"></td>
-                <td><input type="text" name="exercice_budgetaire" value="${row.exercice_budgetaire || ''}"></td>
-                <td class="col-dao"><input type="text" name="dao" value="${row.dao || ''}"></td>
-                <td class="col-objet"><input type="text" name="objet" value="${row.objet || ''}"></td>
-                <td><input type="text" name="article" value="${row.article || ''}"></td>
-                <td class="col-designation"><input type="text" name="designation" value="${row.designation || ''}"></td>
-                <td class="col-unite-mesure"><input type="text" name="unite_mesure" value="${row.unite_mesure || ''}"></td>
-                <td><input type="number" name="quantite_commandee" value="${row.quantite_commandee || ''}"></td>
-                <td><input type="number" step="0.01" name="prix_unitaire_mo" value="${row.prix_unitaire_mo || ''}"></td>
-                <td class="col-tva"><input type="number" step="0.01" name="taux_tva" value="${row.taux_tva || ''}"></td>
-                <td class="col-soumissionnaire"><input type="text" name="soumissionnaire" value="${row.soumissionnaire || ''}"></td>
-                <td><input type="number" step="0.01" name="prix_unitaire_ht" value="${row.prix_unitaire_ht || ''}"></td>
+                <td class="col-ligne-budgetaire"><input type="text" name="ligne_budgetaire" value="${safeString(row.ligne_budgetaire)}"></td>
+                <td><input type="text" name="exercice_budgetaire" value="${safeString(row.exercice_budgetaire)}"></td>
+                <td class="col-dao"><input type="text" name="dao" value="${safeString(row.dao)}"></td>
+                <td class="col-objet"><input type="text" name="objet" value="${safeString(row.objet)}"></td>
+                <td><input type="text" name="article" value="${safeString(row.article)}"></td>
+                <td class="col-designation"><input type="text" name="designation" value="${safeString(row.designation)}"></td>
+                <td class="col-unite-mesure"><input type="text" name="unite_mesure" value="${safeString(row.unite_mesure)}"></td>
+                <td><input type="number" name="quantite_commandee" value="${safeString(row.quantite_commandee)}"></td>
+                <td><input type="number" step="0.01" name="prix_unitaire_mo" value="${safeString(row.prix_unitaire_mo)}"></td>
+                <td class="col-tva"><input type="number" step="0.01" name="taux_tva" value="${safeString(row.taux_tva)}"></td>
+                <td class="col-soumissionnaire"><input type="text" name="soumissionnaire" value="${safeString(row.soumissionnaire)}"></td>
+                <td><input type="number" step="0.01" name="prix_unitaire_ht" value="${safeString(row.prix_unitaire_ht)}"></td>
                 <td class="col-actions">
                     <button class="btn btn-success update-row-btn" data-id="${id}">Mettre à jour</button>
                     <button class="btn btn-warning cancel-edit-btn">Annuler</button>
@@ -786,71 +811,140 @@
             }
         }
 
-        // Gérer l'importation de fichier
+        // Gérer l'importation de fichier - VERSION CORRIGÉE
         function handleFileImport(e) {
             const file = e.target.files[0];
             if (!file) return;
-            
+
+            showStatus('Importation en cours...', true);
+
             const reader = new FileReader();
             reader.onload = function(e) {
-                const data = new Uint8Array(e.target.result);
-                const workbook = XLSX.read(data, { type: 'array' });
-                
-                // Supposons que les données sont dans la première feuille
-                const worksheet = workbook.Sheets[workbook.SheetNames[0]];
-                const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
-                
-                // Ignorer l'en-tête
-                const headers = jsonData[0];
-                const rows = jsonData.slice(1);
-                
-                // Convertir en format de données de l'application
-                const importedData = rows.map(row => {
-                    const obj = {};
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, { type: 'array' });
+                    
+                    // Vérifier qu'il y a au moins une feuille
+                    if (workbook.SheetNames.length === 0) {
+                        showStatus('Le fichier ne contient aucune feuille.', false);
+                        return;
+                    }
+                    
+                    // Utiliser la première feuille
+                    const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+                    
+                    // Convertir la feuille en données JSON
+                    const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+                    
+                    console.log("Données brutes du fichier:", jsonData);
+                    
+                    // Vérifier qu'il y a des données
+                    if (jsonData.length === 0) {
+                        showStatus('Le fichier est vide.', false);
+                        return;
+                    }
+                    
+                    // Les en-têtes doivent être dans la première ligne
+                    const headers = jsonData[0];
+                    const rows = jsonData.slice(1);
+                    
+                    console.log("En-têtes:", headers);
+                    console.log("Lignes:", rows);
+                    
+                    // Vérifier que les en-têtes correspondent au format attendu
+                    if (!headers || headers.length === 0) {
+                        showStatus('Les en-têtes du fichier sont vides.', false);
+                        return;
+                    }
+                    
+                    // Mapping des colonnes avec correspondance flexible
+                    const columnMapping = {};
                     headers.forEach((header, index) => {
-                        // Mapper les en-têtes Excel aux noms de champs de l'application
-                        const fieldMap = {
-                            'LIGNE BUDGETAIRE': 'ligne_budgetaire',
-                            'EXERCICE BUDGETAIRE': 'exercice_budgetaire',
-                            'DAO N°': 'dao',
-                            'OBJET': 'objet',
-                            'ARTICLE N°': 'article',
-                            'DESIGNATION': 'designation',
-                            'UNITE DE MESURE': 'unite_mesure',
-                            'QUANTITE COMMANDEE': 'quantite_commandee',
-                            'PRIX UNITAIRE MAITRE D\'OUVRAGE': 'prix_unitaire_mo',
-                            'TAUX TVA': 'taux_tva',
-                            'SOUMISSIONNAIRE': 'soumissionnaire',
-                            'PRIX UNITAIRE HT DU SOUMISSIONNAIRE': 'prix_unitaire_ht'
-                        };
+                        if (!header) return;
                         
-                        const fieldName = fieldMap[header] || header.toLowerCase().replace(/\s+/g, '_');
-                        obj[fieldName] = row[index] || '';
+                        const headerStr = safeString(header).toLowerCase().trim();
+                        
+                        // Correspondance flexible des en-têtes
+                        if (headerStr.includes('ligne') && headerStr.includes('budget')) columnMapping[index] = 'ligne_budgetaire';
+                        else if (headerStr.includes('exercice') && headerStr.includes('budget')) columnMapping[index] = 'exercice_budgetaire';
+                        else if (headerStr.includes('dao')) columnMapping[index] = 'dao';
+                        else if (headerStr.includes('objet')) columnMapping[index] = 'objet';
+                        else if (headerStr.includes('article')) columnMapping[index] = 'article';
+                        else if (headerStr.includes('designation')) columnMapping[index] = 'designation';
+                        else if (headerStr.includes('unite') && headerStr.includes('mesure')) columnMapping[index] = 'unite_mesure';
+                        else if (headerStr.includes('quantite') && headerStr.includes('commandee')) columnMapping[index] = 'quantite_commandee';
+                        else if (headerStr.includes('prix') && headerStr.includes('unitaire') && headerStr.includes('maitre') && headerStr.includes('ouvrage')) columnMapping[index] = 'prix_unitaire_mo';
+                        else if (headerStr.includes('taux') && headerStr.includes('tva')) columnMapping[index] = 'taux_tva';
+                        else if (headerStr.includes('soumissionnaire')) columnMapping[index] = 'soumissionnaire';
+                        else if (headerStr.includes('prix') && headerStr.includes('unitaire') && headerStr.includes('ht') && headerStr.includes('soumissionnaire')) columnMapping[index] = 'prix_unitaire_ht';
                     });
-                    return obj;
-                }).filter(row => row.designation || row.article); // Filtrer les lignes vides
-                
-                // Ajouter aux données Firebase
-                const batch = db.batch();
-                const collectionRef = db.collection('referentiel_prix');
-                
-                importedData.forEach((data) => {
-                    const docRef = collectionRef.doc(); // Créer une nouvelle référence de document
-                    batch.set(docRef, data);
-                });
-                
-                batch.commit()
-                    .then(() => {
-                        // Recharger les données depuis Firebase
-                        loadDataFromFirebase();
-                        showStatus('Données importées avec succès!', true);
-                    })
-                    .catch((error) => {
-                        console.error("Erreur lors de l'importation: ", error);
-                        showStatus('Erreur lors de l\'importation: ' + error.message, false);
-                    });
+                    
+                    console.log("Mapping des colonnes:", columnMapping);
+                    
+                    // Convertir les données
+                    const importedData = rows.map(row => {
+                        const obj = {};
+                        Object.keys(columnMapping).forEach(colIndex => {
+                            const fieldName = columnMapping[colIndex];
+                            obj[fieldName] = row[colIndex] !== undefined ? safeString(row[colIndex]) : '';
+                        });
+                        return obj;
+                    }).filter(row => 
+                        // Garder les lignes qui ont au moins une donnée importante
+                        row.designation || row.article || row.ligne_budgetaire || row.dao
+                    );
+                    
+                    console.log("Données importées après conversion:", importedData);
+                    
+                    if (importedData.length === 0) {
+                        showStatus('Aucune donnée valide trouvée. Vérifiez le format du fichier.', false);
+                        return;
+                    }
+                    
+                    // Importer les données dans Firebase
+                    let successCount = 0;
+                    let errorCount = 0;
+                    
+                    const importNext = (index) => {
+                        if (index >= importedData.length) {
+                            // Toutes les données ont été importées
+                            if (errorCount === 0) {
+                                showStatus(`${successCount} lignes importées avec succès!`, true);
+                            } else {
+                                showStatus(`${successCount} lignes importées, ${errorCount} erreurs.`, false);
+                            }
+                            // Recharger les données
+                            loadDataFromFirebase();
+                            return;
+                        }
+                        
+                        const data = importedData[index];
+                        saveRowToFirebase(data)
+                            .then(() => {
+                                successCount++;
+                                importNext(index + 1);
+                            })
+                            .catch(error => {
+                                console.error("Erreur lors de l'importation d'une ligne:", error);
+                                errorCount++;
+                                importNext(index + 1);
+                            });
+                    };
+                    
+                    // Démarrer l'importation séquentielle
+                    importNext(0);
+                    
+                } catch (error) {
+                    console.error("Erreur lors du traitement du fichier:", error);
+                    showStatus('Erreur lors du traitement du fichier: ' + error.message, false);
+                }
                 
                 // Réinitialiser l'input file
+                fileInput.value = '';
+            };
+            
+            reader.onerror = function() {
+                showStatus('Erreur lors de la lecture du fichier.', false);
                 fileInput.value = '';
             };
             
@@ -861,18 +955,18 @@
         function exportToExcel() {
             // Préparer les données pour l'export
             const exportData = tableData.map(row => ({
-                'LIGNE BUDGETAIRE': row.ligne_budgetaire,
-                'EXERCICE BUDGETAIRE': row.exercice_budgetaire,
-                'DAO N°': row.dao,
-                'OBJET': row.objet,
-                'ARTICLE N°': row.article,
-                'DESIGNATION': row.designation,
-                'UNITE DE MESURE': row.unite_mesure,
-                'QUANTITE COMMANDEE': row.quantite_commandee,
-                'PRIX UNITAIRE MAITRE D\'OUVRAGE': row.prix_unitaire_mo,
-                'TAUX TVA': row.taux_tva,
-                'SOUMISSIONNAIRE': row.soumissionnaire,
-                'PRIX UNITAIRE HT DU SOUMISSIONNAIRE': row.prix_unitaire_ht
+                'LIGNE BUDGETAIRE': safeString(row.ligne_budgetaire),
+                'EXERCICE BUDGETAIRE': safeString(row.exercice_budgetaire),
+                'DAO N°': safeString(row.dao),
+                'OBJET': safeString(row.objet),
+                'ARTICLE N°': safeString(row.article),
+                'DESIGNATION': safeString(row.designation),
+                'UNITE DE MESURE': safeString(row.unite_mesure),
+                'QUANTITE COMMANDEE': safeString(row.quantite_commandee),
+                'PRIX UNITAIRE MAITRE D\'OUVRAGE': safeString(row.prix_unitaire_mo),
+                'TAUX TVA': safeString(row.taux_tva),
+                'SOUMISSIONNAIRE': safeString(row.soumissionnaire),
+                'PRIX UNITAIRE HT DU SOUMISSIONNAIRE': safeString(row.prix_unitaire_ht)
             }));
             
             // Créer un classeur et une feuille
@@ -889,18 +983,18 @@
         function exportToPdf() {
             // Préparer les données pour l'export
             const tableBody = tableData.map(row => [
-                row.ligne_budgetaire || '',
-                row.exercice_budgetaire || '',
-                row.dao || '',
-                row.objet || '',
-                row.article || '',
-                row.designation || '',
-                row.unite_mesure || '',
-                row.quantite_commandee || '',
-                row.prix_unitaire_mo || '',
-                row.taux_tva ? row.taux_tva + '%' : '',
-                row.soumissionnaire || '',
-                row.prix_unitaire_ht || ''
+                safeString(row.ligne_budgetaire),
+                safeString(row.exercice_budgetaire),
+                safeString(row.dao),
+                safeString(row.objet),
+                safeString(row.article),
+                safeString(row.designation),
+                safeString(row.unite_mesure),
+                safeString(row.quantite_commandee),
+                safeString(row.prix_unitaire_mo),
+                row.taux_tva ? safeString(row.taux_tva) + '%' : '',
+                safeString(row.soumissionnaire),
+                safeString(row.prix_unitaire_ht)
             ]);
             
             const docDefinition = {
@@ -951,7 +1045,7 @@
         // Mettre à jour la liste des articles pour le graphique
         function updateArticleSelect() {
             // Récupérer tous les articles uniques
-            const articles = [...new Set(tableData.map(row => row.designation).filter(Boolean))];
+            const articles = [...new Set(tableData.map(row => safeString(row.designation)).filter(Boolean))];
             
             // Mettre à jour le select
             articleSelect.innerHTML = '<option value="">Sélectionner un article</option>';
@@ -972,19 +1066,18 @@
             }
             
             // Filtrer les données pour l'article sélectionné
-            const articleData = tableData.filter(row => row.designation === selectedArticle);
+            const articleData = tableData.filter(row => safeString(row.designation) === selectedArticle);
             
             // Trier par exercice budgétaire et DAO
             articleData.sort((a, b) => {
-                if (a.exercice_budgetaire !== b.exercice_budgetaire) {
-                    return a.exercice_budgetaire.localeCompare(b.exercice_budgetaire);
-                }
-                return a.dao.localeCompare(b.dao);
+                const compareExercice = safeCompare(a.exercice_budgetaire, b.exercice_budgetaire);
+                if (compareExercice !== 0) return compareExercice;
+                return safeCompare(a.dao, b.dao);
             });
             
             // Préparer les données pour le graphique
-            const labels = articleData.map(row => `${row.exercice_budgetaire} - ${row.dao}`);
-            const prices = articleData.map(row => parseFloat(row.prix_unitaire_ht) || 0);
+            const labels = articleData.map(row => `${safeString(row.exercice_budgetaire)} - ${safeString(row.dao)}`);
+            const prices = articleData.map(row => safeNumber(row.prix_unitaire_ht));
             
             // Détruire le graphique existant s'il y en a un
             if (chart) {
