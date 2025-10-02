@@ -40,7 +40,7 @@
         }
 
         .container {
-            max-width: 1400px;
+            max-width: 1800px;
             margin: 0 auto;
             padding: 20px;
         }
@@ -74,14 +74,23 @@
         .search-container {
             flex: 1;
             min-width: 300px;
+            position: relative;
         }
 
         .search-container input {
             width: 100%;
-            padding: 10px 15px;
+            padding: 10px 40px 10px 15px;
             border: 1px solid #ddd;
             border-radius: 4px;
             font-size: 1rem;
+        }
+
+        .search-icon {
+            position: absolute;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 18px;
         }
 
         .action-buttons {
@@ -91,7 +100,7 @@
         }
 
         .btn {
-            padding: 10px 15px;
+            padding: 8px 12px;
             border: none;
             border-radius: 4px;
             cursor: pointer;
@@ -101,6 +110,7 @@
             align-items: center;
             gap: 5px;
             font-family: 'Times New Roman', Times, serif;
+            font-size: 14px;
         }
 
         .btn-primary {
@@ -184,6 +194,12 @@
             border-radius: 0 0 8px 8px;
         }
 
+        .pagination-controls {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
         .rows-per-page {
             display: flex;
             align-items: center;
@@ -194,6 +210,11 @@
             padding: 5px 10px;
             border: 1px solid #ddd;
             border-radius: 4px;
+        }
+
+        .page-info {
+            font-size: 14px;
+            font-weight: 500;
         }
 
         .chart-container {
@@ -214,6 +235,18 @@
         .chart-controls {
             display: flex;
             gap: 10px;
+            align-items: center;
+        }
+
+        .chart-search-container {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .chart-search-label {
+            font-size: 14px;
+            font-weight: 500;
         }
 
         input[type="text"], select {
@@ -273,16 +306,16 @@
         }
 
         .col-objet {
-            width: 250px;
-            max-width: 250px;
+            width: 600px;
+            max-width: 600px;
             word-wrap: break-word;
             white-space: normal;
             text-align: justify;
         }
 
         .col-designation {
-            width: 250px;
-            max-width: 250px;
+            width: 600px;
+            max-width: 600px;
             word-wrap: break-word;
             white-space: normal;
             text-align: justify;
@@ -297,8 +330,8 @@
         }
 
         .col-soumissionnaire {
-            width: 150px;
-            max-width: 150px;
+            width: 200px;
+            max-width: 200px;
             word-wrap: break-word;
             white-space: normal;
             text-align: justify;
@@ -310,8 +343,47 @@
         }
 
         .col-actions {
-            width: 150px;
+            width: 120px;
             text-align: center;
+        }
+
+        .action-btn {
+            padding: 5px 8px;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 12px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 30px;
+            height: 30px;
+            margin: 2px;
+        }
+
+        .btn-edit {
+            background-color: var(--warning-color);
+            color: white;
+        }
+
+        .btn-delete {
+            background-color: var(--accent-color);
+            color: white;
+        }
+
+        .btn-save {
+            background-color: var(--success-color);
+            color: white;
+        }
+
+        .btn-update {
+            background-color: var(--secondary-color);
+            color: white;
+        }
+
+        .btn-cancel {
+            background-color: #95a5a6;
+            color: white;
         }
 
         @media (max-width: 768px) {
@@ -332,6 +404,16 @@
                 flex-direction: column;
                 gap: 15px;
             }
+            
+            .pagination-controls {
+                flex-direction: column;
+                gap: 10px;
+            }
+            
+            .col-objet, .col-designation {
+                width: 300px;
+                max-width: 300px;
+            }
         }
     </style>
 </head>
@@ -346,6 +428,7 @@
         <div class="controls">
             <div class="search-container">
                 <input type="text" id="searchInput" placeholder="Rechercher par désignation, exercice, DAO ou objet...">
+                <span class="search-icon">🔍</span>
             </div>
             <div class="action-buttons">
                 <button class="btn btn-primary" id="importBtn">
@@ -386,14 +469,17 @@
         </div>
 
         <div class="table-footer">
-            <div class="rows-per-page">
-                <span>Afficher</span>
-                <select id="rowsPerPage">
-                    <option value="10">10 lignes</option>
-                    <option value="20">20 lignes</option>
-                    <option value="50">50 lignes</option>
-                    <option value="100">100 lignes</option>
-                </select>
+            <div class="pagination-controls">
+                <div class="rows-per-page">
+                    <span>Afficher</span>
+                    <select id="rowsPerPage">
+                        <option value="10">10 lignes</option>
+                        <option value="20">20 lignes</option>
+                        <option value="50">50 lignes</option>
+                        <option value="100">100 lignes</option>
+                    </select>
+                </div>
+                <div class="page-info" id="pageInfo">Page 1/1</div>
             </div>
             <button class="btn btn-primary" id="addRowBtn">
                 <i>➕</i> Ajouter une nouvelle ligne
@@ -404,9 +490,10 @@
             <div class="chart-header">
                 <h2>Évolution du Prix des Articles</h2>
                 <div class="chart-controls">
-                    <select id="articleSelect">
-                        <option value="">Sélectionner un article</option>
-                    </select>
+                    <div class="chart-search-container">
+                        <div class="chart-search-label">Voir l'évolution de prix d'un article</div>
+                        <input type="text" id="articleSearch" placeholder="Saisir le nom de l'article...">
+                    </div>
                     <button class="btn btn-primary" id="updateChartBtn">Mettre à jour</button>
                 </div>
             </div>
@@ -447,10 +534,11 @@
         const exportExcelBtn = document.getElementById('exportExcelBtn');
         const exportPdfBtn = document.getElementById('exportPdfBtn');
         const fileInput = document.getElementById('fileInput');
-        const articleSelect = document.getElementById('articleSelect');
+        const articleSearch = document.getElementById('articleSearch');
         const updateChartBtn = document.getElementById('updateChartBtn');
         const priceChart = document.getElementById('priceChart');
         const statusMessage = document.getElementById('statusMessage');
+        const pageInfo = document.getElementById('pageInfo');
 
         // Initialisation de l'application
         document.addEventListener('DOMContentLoaded', function() {
@@ -461,6 +549,7 @@
             searchInput.addEventListener('input', filterTable);
             rowsPerPageSelect.addEventListener('change', function() {
                 rowsPerPage = parseInt(this.value);
+                currentPage = 1;
                 renderTable();
             });
             
@@ -476,7 +565,6 @@
             
             // Rendre le tableau initial
             renderTable();
-            updateArticleSelect();
         });
 
         // Afficher un message de statut
@@ -525,22 +613,18 @@
                         tableData.push(data);
                     });
                     
-                    // Trier les données côté client avec gestion des erreurs
+                    // Trier les données côté client selon les critères demandés
                     tableData.sort((a, b) => {
                         try {
-                            // Par exercice budgétaire (desc)
-                            if (a.exercice_budgetaire !== b.exercice_budgetaire) {
-                                if (!a.exercice_budgetaire) return 1;
-                                if (!b.exercice_budgetaire) return -1;
-                                return safeCompare(b.exercice_budgetaire, a.exercice_budgetaire);
-                            }
-                            // Par DAO (desc)
-                            if (a.dao !== b.dao) {
-                                if (!a.dao) return 1;
-                                if (!b.dao) return -1;
-                                return safeCompare(b.dao, a.dao);
-                            }
-                            // Par numéro d'article (asc)
+                            // Par exercice budgétaire (croissant)
+                            const compareExercice = safeCompare(a.exercice_budgetaire, b.exercice_budgetaire);
+                            if (compareExercice !== 0) return compareExercice;
+                            
+                            // Par DAO (croissant)
+                            const compareDao = safeCompare(a.dao, b.dao);
+                            if (compareDao !== 0) return compareDao;
+                            
+                            // Par numéro d'article (croissant)
                             const numA = safeNumber(a.article);
                             const numB = safeNumber(b.article);
                             return numA - numB;
@@ -552,7 +636,6 @@
                     
                     filteredData = [...tableData];
                     renderTable();
-                    updateArticleSelect();
                     showStatus('Données chargées avec succès!', true);
                 })
                 .catch((error) => {
@@ -629,8 +712,8 @@
                     <td class="col-soumissionnaire">${safeString(row.soumissionnaire)}</td>
                     <td>${safeString(row.prix_unitaire_ht)}</td>
                     <td class="col-actions">
-                        <button class="btn btn-warning edit-row-btn" data-id="${row.id}">Modifier</button>
-                        <button class="btn btn-danger delete-row-btn" data-id="${row.id}">Supprimer</button>
+                        <button class="action-btn btn-edit edit-row-btn" data-id="${row.id}" title="Modifier">✏️</button>
+                        <button class="action-btn btn-delete delete-row-btn" data-id="${row.id}" title="Supprimer">🗑️</button>
                     </td>
                 `;
                 tableBody.appendChild(tr);
@@ -638,6 +721,9 @@
             
             // Ajouter la ligne vide pour nouvelle saisie
             addEmptyRow();
+            
+            // Mettre à jour l'affichage de la pagination
+            updatePaginationInfo();
             
             // Ajouter les événements aux boutons
             document.querySelectorAll('.save-row-btn').forEach(btn => {
@@ -651,6 +737,12 @@
             document.querySelectorAll('.delete-row-btn').forEach(btn => {
                 btn.addEventListener('click', deleteRow);
             });
+        }
+
+        // Mettre à jour l'affichage de la pagination
+        function updatePaginationInfo() {
+            const totalPages = Math.ceil(filteredData.length / rowsPerPage);
+            pageInfo.textContent = `Page ${currentPage}/${totalPages > 0 ? totalPages : 1}`;
         }
 
         // Ajouter une ligne vide pour saisie
@@ -671,7 +763,7 @@
                 <td class="col-soumissionnaire"><input type="text" name="soumissionnaire"></td>
                 <td><input type="number" step="0.01" name="prix_unitaire_ht"></td>
                 <td class="col-actions">
-                    <button class="btn btn-success save-row-btn">Enregistrer</button>
+                    <button class="action-btn btn-save save-row-btn" title="Enregistrer">💾</button>
                 </td>
             `;
             tableBody.appendChild(emptyRow);
@@ -709,7 +801,6 @@
                     
                     // Re-rendre
                     renderTable();
-                    updateArticleSelect();
                     
                     showStatus('Ligne ajoutée avec succès!', true);
                 })
@@ -740,8 +831,8 @@
                 <td class="col-soumissionnaire"><input type="text" name="soumissionnaire" value="${safeString(row.soumissionnaire)}"></td>
                 <td><input type="number" step="0.01" name="prix_unitaire_ht" value="${safeString(row.prix_unitaire_ht)}"></td>
                 <td class="col-actions">
-                    <button class="btn btn-success update-row-btn" data-id="${id}">Mettre à jour</button>
-                    <button class="btn btn-warning cancel-edit-btn">Annuler</button>
+                    <button class="action-btn btn-update update-row-btn" data-id="${id}" title="Mettre à jour">✅</button>
+                    <button class="action-btn btn-cancel cancel-edit-btn" title="Annuler">❌</button>
                 </td>
             `;
             
@@ -777,7 +868,6 @@
                     
                     // Re-rendre
                     renderTable();
-                    updateArticleSelect();
                     
                     showStatus('Ligne mise à jour avec succès!', true);
                 })
@@ -800,7 +890,6 @@
                         
                         // Re-rendre
                         renderTable();
-                        updateArticleSelect();
                         
                         showStatus('Ligne supprimée avec succès!', true);
                     })
@@ -857,26 +946,26 @@
                         return;
                     }
                     
-                    // Mapping des colonnes avec correspondance flexible
+                    // Mapping des colonnes avec correspondance exacte
                     const columnMapping = {};
                     headers.forEach((header, index) => {
                         if (!header) return;
                         
-                        const headerStr = safeString(header).toLowerCase().trim();
+                        const headerStr = safeString(header).trim();
                         
-                        // Correspondance flexible des en-têtes
-                        if (headerStr.includes('ligne') && headerStr.includes('budget')) columnMapping[index] = 'ligne_budgetaire';
-                        else if (headerStr.includes('exercice') && headerStr.includes('budget')) columnMapping[index] = 'exercice_budgetaire';
-                        else if (headerStr.includes('dao')) columnMapping[index] = 'dao';
-                        else if (headerStr.includes('objet')) columnMapping[index] = 'objet';
-                        else if (headerStr.includes('article')) columnMapping[index] = 'article';
-                        else if (headerStr.includes('designation')) columnMapping[index] = 'designation';
-                        else if (headerStr.includes('unite') && headerStr.includes('mesure')) columnMapping[index] = 'unite_mesure';
-                        else if (headerStr.includes('quantite') && headerStr.includes('commandee')) columnMapping[index] = 'quantite_commandee';
-                        else if (headerStr.includes('prix') && headerStr.includes('unitaire') && headerStr.includes('maitre') && headerStr.includes('ouvrage')) columnMapping[index] = 'prix_unitaire_mo';
-                        else if (headerStr.includes('taux') && headerStr.includes('tva')) columnMapping[index] = 'taux_tva';
-                        else if (headerStr.includes('soumissionnaire')) columnMapping[index] = 'soumissionnaire';
-                        else if (headerStr.includes('prix') && headerStr.includes('unitaire') && headerStr.includes('ht') && headerStr.includes('soumissionnaire')) columnMapping[index] = 'prix_unitaire_ht';
+                        // Correspondance exacte des en-têtes
+                        if (headerStr === 'LIGNE BUDGETAIRE') columnMapping[index] = 'ligne_budgetaire';
+                        else if (headerStr === 'EXERCICE BUDGETAIRE') columnMapping[index] = 'exercice_budgetaire';
+                        else if (headerStr === 'DAO N°') columnMapping[index] = 'dao';
+                        else if (headerStr === 'OBJET') columnMapping[index] = 'objet';
+                        else if (headerStr === 'ARTICLE N°') columnMapping[index] = 'article';
+                        else if (headerStr === 'DESIGNATION') columnMapping[index] = 'designation';
+                        else if (headerStr === 'UNITE DE MESURE') columnMapping[index] = 'unite_mesure';
+                        else if (headerStr === 'QUANTITE COMMANDEE') columnMapping[index] = 'quantite_commandee';
+                        else if (headerStr === 'PRIX UNITAIRE MAITRE D\'OUVRAGE') columnMapping[index] = 'prix_unitaire_mo';
+                        else if (headerStr === 'TAUX TVA') columnMapping[index] = 'taux_tva';
+                        else if (headerStr === 'SOUMISSIONNAIRE') columnMapping[index] = 'soumissionnaire';
+                        else if (headerStr === 'PRIX UNITAIRE HT DU SOUMISSIONNAIRE') columnMapping[index] = 'prix_unitaire_ht';
                     });
                     
                     console.log("Mapping des colonnes:", columnMapping);
@@ -1042,31 +1131,24 @@
             showStatus('Export PDF réussi!', true);
         }
 
-        // Mettre à jour la liste des articles pour le graphique
-        function updateArticleSelect() {
-            // Récupérer tous les articles uniques
-            const articles = [...new Set(tableData.map(row => safeString(row.designation)).filter(Boolean))];
-            
-            // Mettre à jour le select
-            articleSelect.innerHTML = '<option value="">Sélectionner un article</option>';
-            articles.forEach(article => {
-                const option = document.createElement('option');
-                option.value = article;
-                option.textContent = article;
-                articleSelect.appendChild(option);
-            });
-        }
-
         // Mettre à jour le graphique
         function updateChart() {
-            const selectedArticle = articleSelect.value;
-            if (!selectedArticle) {
-                alert('Veuillez sélectionner un article');
+            const searchTerm = safeString(articleSearch.value).toLowerCase();
+            
+            if (!searchTerm) {
+                alert('Veuillez saisir le nom d\'un article');
                 return;
             }
             
-            // Filtrer les données pour l'article sélectionné
-            const articleData = tableData.filter(row => safeString(row.designation) === selectedArticle);
+            // Filtrer les données pour l'article recherché
+            const articleData = tableData.filter(row => 
+                safeString(row.designation).toLowerCase().includes(searchTerm)
+            );
+            
+            if (articleData.length === 0) {
+                alert('Aucun article trouvé avec ce nom');
+                return;
+            }
             
             // Trier par exercice budgétaire et DAO
             articleData.sort((a, b) => {
@@ -1078,6 +1160,22 @@
             // Préparer les données pour le graphique
             const labels = articleData.map(row => `${safeString(row.exercice_budgetaire)} - ${safeString(row.dao)}`);
             const prices = articleData.map(row => safeNumber(row.prix_unitaire_ht));
+            
+            // Calculer l'échelle en fonction des prix
+            const maxPrice = Math.max(...prices);
+            let stepSize = 10; // Valeur par défaut
+            
+            if (maxPrice < 20) {
+                stepSize = 4;
+            } else if (maxPrice < 50) {
+                stepSize = 10;
+            } else if (maxPrice < 1000) {
+                stepSize = 50;
+            } else if (maxPrice < 5000) {
+                stepSize = 200;
+            } else {
+                stepSize = 500;
+            }
             
             // Détruire le graphique existant s'il y en a un
             if (chart) {
@@ -1091,7 +1189,7 @@
                 data: {
                     labels: labels,
                     datasets: [{
-                        label: `Prix unitaire HT - ${selectedArticle}`,
+                        label: `Prix unitaire HT - ${searchTerm}`,
                         data: prices,
                         borderColor: '#3498db',
                         backgroundColor: 'rgba(52, 152, 219, 0.1)',
@@ -1105,7 +1203,7 @@
                     plugins: {
                         title: {
                             display: true,
-                            text: `Évolution du prix pour "${selectedArticle}"`
+                            text: `Évolution du prix pour "${searchTerm}"`
                         },
                         legend: {
                             display: true
@@ -1117,6 +1215,9 @@
                             title: {
                                 display: true,
                                 text: 'Prix unitaire HT'
+                            },
+                            ticks: {
+                                stepSize: stepSize
                             }
                         },
                         x: {
