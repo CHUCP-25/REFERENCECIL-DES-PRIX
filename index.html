@@ -494,7 +494,9 @@
                         <div class="chart-search-label">Voir l'évolution de prix d'un article</div>
                         <input type="text" id="articleSearch" placeholder="Saisir le nom de l'article...">
                     </div>
-                    <button class="btn btn-primary" id="updateChartBtn">Mettre à jour</button>
+                    <button class="btn btn-primary" id="updateChartBtn">
+                        <i>📈</i> Voir
+                    </button>
                 </div>
             </div>
             <canvas id="priceChart"></canvas>
@@ -1159,10 +1161,12 @@
             
             // Préparer les données pour le graphique
             const labels = articleData.map(row => `${safeString(row.exercice_budgetaire)} - ${safeString(row.dao)}`);
-            const prices = articleData.map(row => safeNumber(row.prix_unitaire_ht));
+            const soumissionnairePrices = articleData.map(row => safeNumber(row.prix_unitaire_ht));
+            const maitreOuvragePrices = articleData.map(row => safeNumber(row.prix_unitaire_mo));
+            const soumissionnaires = articleData.map(row => safeString(row.soumissionnaire));
             
             // Calculer l'échelle en fonction des prix
-            const maxPrice = Math.max(...prices);
+            const maxPrice = Math.max(...soumissionnairePrices, ...maitreOuvragePrices);
             let stepSize = 10; // Valeur par défaut
             
             if (maxPrice < 20) {
@@ -1188,15 +1192,26 @@
                 type: 'line',
                 data: {
                     labels: labels,
-                    datasets: [{
-                        label: `Prix unitaire HT - ${searchTerm}`,
-                        data: prices,
-                        borderColor: '#3498db',
-                        backgroundColor: 'rgba(52, 152, 219, 0.1)',
-                        borderWidth: 2,
-                        fill: true,
-                        tension: 0.4
-                    }]
+                    datasets: [
+                        {
+                            label: 'Prix unitaire HT - Soumissionnaires',
+                            data: soumissionnairePrices,
+                            borderColor: '#3498db',
+                            backgroundColor: 'rgba(52, 152, 219, 0.1)',
+                            borderWidth: 2,
+                            fill: true,
+                            tension: 0.4
+                        },
+                        {
+                            label: 'Estimation Maître d\'ouvrage',
+                            data: maitreOuvragePrices,
+                            borderColor: '#2ecc71',
+                            backgroundColor: 'rgba(46, 204, 113, 0.1)',
+                            borderWidth: 2,
+                            fill: true,
+                            tension: 0.4
+                        }
+                    ]
                 },
                 options: {
                     responsive: true,
@@ -1207,6 +1222,21 @@
                         },
                         legend: {
                             display: true
+                        },
+                        tooltip: {
+                            callbacks: {
+                                afterLabel: function(context) {
+                                    const index = context.dataIndex;
+                                    if (context.datasetIndex === 0) {
+                                        // Pour les soumissionnaires, afficher le nom de la société
+                                        return `Société: ${soumissionnaires[index]}`;
+                                    } else if (context.datasetIndex === 1) {
+                                        // Pour le maître d'ouvrage
+                                        return 'Estimation Maître d\'ouvrage';
+                                    }
+                                    return '';
+                                }
+                            }
                         }
                     },
                     scales: {
