@@ -556,6 +556,80 @@
             color: white;
         }
 
+        /* Styles pour la popup d'export de graphique */
+        .export-chart-popup {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 2000;
+            display: none;
+        }
+
+        .export-chart-content {
+            background-color: white;
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            width: 400px;
+            max-width: 90%;
+            text-align: center;
+        }
+
+        .export-chart-content h3 {
+            margin-bottom: 15px;
+            color: #2c3e50;
+            font-size: 1.3rem;
+        }
+
+        .export-chart-content p {
+            margin-bottom: 20px;
+            color: #5a6c7d;
+            font-size: 1rem;
+        }
+
+        .export-chart-buttons {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+        }
+
+        .export-chart-btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            min-width: 100px;
+            font-size: 1rem;
+        }
+
+        .export-pdf-btn {
+            background: linear-gradient(135deg, #e74c3c, #c0392b);
+            color: white;
+        }
+
+        .export-excel-btn {
+            background: linear-gradient(135deg, #27ae60, #2ecc71);
+            color: white;
+        }
+
+        .export-cancel-btn {
+            background: linear-gradient(135deg, #95a5a6, #7f8c8d);
+            color: white;
+        }
+
+        .export-chart-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+
         @media (max-width: 768px) {
             .controls {
                 flex-direction: column;
@@ -597,6 +671,10 @@
 
             .password-popup::before {
                 right: 70px;
+            }
+
+            .export-chart-buttons {
+                flex-direction: column;
             }
         }
     </style>
@@ -717,6 +795,19 @@
         </div>
     </div>
 
+    <!-- Popup pour l'export du graphique -->
+    <div class="export-chart-popup" id="exportChartPopup">
+        <div class="export-chart-content">
+            <h3>Exporter le graphique</h3>
+            <p>Choisissez le format d'export :</p>
+            <div class="export-chart-buttons">
+                <button class="export-chart-btn export-pdf-btn" id="exportChartPdfBtn">PDF</button>
+                <button class="export-chart-btn export-excel-btn" id="exportChartExcelBtn">Excel</button>
+                <button class="export-chart-btn export-cancel-btn" id="exportChartCancelBtn">Annuler</button>
+            </div>
+        </div>
+    </div>
+
     <input type="file" id="fileInput" class="hidden" accept=".xlsx, .xls">
 
     <script>
@@ -766,6 +857,10 @@
         const confirmPasswordBtn = document.getElementById('confirmPasswordBtn');
         const cancelPasswordBtn = document.getElementById('cancelPasswordBtn');
         const togglePassword = document.getElementById('togglePassword');
+        const exportChartPopup = document.getElementById('exportChartPopup');
+        const exportChartPdfBtn = document.getElementById('exportChartPdfBtn');
+        const exportChartExcelBtn = document.getElementById('exportChartExcelBtn');
+        const exportChartCancelBtn = document.getElementById('exportChartCancelBtn');
 
         // Initialisation de l'application
         document.addEventListener('DOMContentLoaded', function() {
@@ -790,7 +885,7 @@
             exportPdfBtn.addEventListener('click', exportToPdf);
             exportAllBtn.addEventListener('click', togglePasswordPopup);
             updateChartBtn.addEventListener('click', updateChart);
-            exportChartBtn.addEventListener('click', exportChart);
+            exportChartBtn.addEventListener('click', showExportChartPopup);
             
             // Événements de pagination
             prevPageBtn.addEventListener('click', goToPrevPage);
@@ -801,10 +896,19 @@
             cancelPasswordBtn.addEventListener('click', hidePasswordPopup);
             togglePassword.addEventListener('click', togglePasswordVisibility);
             
-            // Fermer la popup si on clique en dehors
+            // Événements pour la popup d'export de graphique
+            exportChartPdfBtn.addEventListener('click', exportChartToPdf);
+            exportChartExcelBtn.addEventListener('click', exportChartToExcel);
+            exportChartCancelBtn.addEventListener('click', hideExportChartPopup);
+            
+            // Fermer les popups si on clique en dehors
             document.addEventListener('click', function(event) {
                 if (!event.target.closest('.export-all-container') && !event.target.closest('.password-popup')) {
                     hidePasswordPopup();
+                }
+                
+                if (event.target.classList.contains('export-chart-popup')) {
+                    hideExportChartPopup();
                 }
             });
             
@@ -854,6 +958,20 @@
                 passwordInput.value = '';
                 passwordInput.focus();
             }
+        }
+
+        // Afficher la popup d'export de graphique
+        function showExportChartPopup() {
+            if (!currentChartData) {
+                alert('Aucun graphique à exporter. Veuillez d\'abord générer un graphique.');
+                return;
+            }
+            exportChartPopup.style.display = 'flex';
+        }
+
+        // Cacher la popup d'export de graphique
+        function hideExportChartPopup() {
+            exportChartPopup.style.display = 'none';
         }
 
         // Afficher un message de statut
@@ -1486,6 +1604,9 @@
                                 ]
                             },
                             layout: {
+                                fillColor: function(i, node) { 
+                                    return (i === 0) ? '#CCCCCC' : null; 
+                                },
                                 hLineWidth: function(i, node) {
                                     return (i === 0 || i === node.table.body.length) ? 1 : 0.5;
                                 },
@@ -1531,6 +1652,7 @@
                     ? 'referentiel_des_prix_filtre.pdf' 
                     : 'referentiel_des_prix_page_' + currentPage + '.pdf';
                 
+                // CORRECTION : Utiliser la bonne méthode pour générer et télécharger le PDF
                 pdfMake.createPdf(docDefinition).download(fileName);
                 showStatus('Export PDF des données affichées réussi!', true);
             } catch (error) {
@@ -1718,111 +1840,105 @@
             exportChartBtn.style.display = 'flex';
         }
 
-        // Exporter le graphique
-        function exportChart() {
-            if (!currentChartData) {
-                alert('Aucun graphique à exporter. Veuillez d\'abord générer un graphique.');
-                return;
-            }
-
-            const choice = confirm('Voulez-vous exporter le graphique en PDF? Cliquez sur OK pour PDF ou Annuler pour Excel.');
-            
-            if (choice) {
-                // Exporter en PDF
-                try {
-                    const canvas = document.getElementById('priceChart');
-                    const canvasImage = canvas.toDataURL('image/png', 1.0);
-                    
-                    // Préparer les données pour le tableau PDF
-                    const tableBody = [];
-                    tableBody.push(['Exercice - DAO', 'Prix Soumissionnaire (HT)', 'Prix Maître d\'ouvrage', 'Société']);
-                    
-                    for (let i = 0; i < currentChartData.labels.length; i++) {
-                        tableBody.push([
-                            currentChartData.labels[i],
-                            currentChartData.soumissionnairePrices[i].toFixed(2),
-                            currentChartData.maitreOuvragePrices[i].toFixed(2),
-                            currentChartData.soumissionnaires[i]
-                        ]);
-                    }
-                    
-                    const docDefinition = {
-                        content: [
-                            { 
-                                text: `Évolution du prix pour "${currentChartData.searchTerm}"`, 
-                                style: 'header',
-                                margin: [0, 0, 0, 10]
-                            },
-                            {
-                                image: canvasImage,
-                                width: 500,
-                                margin: [0, 0, 0, 20]
-                            },
-                            {
-                                text: 'Données détaillées',
-                                style: 'subheader',
-                                margin: [0, 0, 0, 10]
-                            },
-                            {
-                                table: {
-                                    headerRows: 1,
-                                    widths: ['*', 'auto', 'auto', '*'],
-                                    body: tableBody
-                                }
-                            }
-                        ],
-                        styles: {
-                            header: {
-                                fontSize: 18,
-                                bold: true,
-                                alignment: 'center'
-                            },
-                            subheader: {
-                                fontSize: 14,
-                                bold: true,
-                                margin: [0, 10, 0, 5]
-                            }
+        // Exporter le graphique en PDF
+        function exportChartToPdf() {
+            try {
+                const canvas = document.getElementById('priceChart');
+                const canvasImage = canvas.toDataURL('image/png', 1.0);
+                
+                // Préparer les données pour le tableau PDF
+                const tableBody = [];
+                tableBody.push(['Exercice - DAO', 'Prix Soumissionnaire (HT)', 'Prix Maître d\'ouvrage', 'Société']);
+                
+                for (let i = 0; i < currentChartData.labels.length; i++) {
+                    tableBody.push([
+                        currentChartData.labels[i],
+                        currentChartData.soumissionnairePrices[i].toFixed(2),
+                        currentChartData.maitreOuvragePrices[i].toFixed(2),
+                        currentChartData.soumissionnaires[i]
+                    ]);
+                }
+                
+                const docDefinition = {
+                    content: [
+                        { 
+                            text: `Évolution du prix pour "${currentChartData.searchTerm}"`, 
+                            style: 'header',
+                            margin: [0, 0, 0, 10]
                         },
-                        defaultStyle: {
-                            fontSize: 10,
-                            font: 'Times'
+                        {
+                            image: canvasImage,
+                            width: 500,
+                            margin: [0, 0, 0, 20]
+                        },
+                        {
+                            text: 'Données détaillées',
+                            style: 'subheader',
+                            margin: [0, 0, 0, 10]
+                        },
+                        {
+                            table: {
+                                headerRows: 1,
+                                widths: ['*', 'auto', 'auto', '*'],
+                                body: tableBody
+                            }
                         }
-                    };
-                    
-                    pdfMake.createPdf(docDefinition).download(`graphique_${currentChartData.searchTerm}.pdf`);
-                    showStatus('Graphique exporté en PDF avec succès!', true);
-                } catch (error) {
-                    console.error("Erreur lors de l'export PDF du graphique:", error);
-                    showStatus('Erreur lors de l\'export PDF du graphique: ' + error.message, false);
-                }
-            } else {
-                // Exporter en Excel
-                try {
-                    const worksheetData = [];
-                    
-                    // En-têtes
-                    worksheetData.push(['Exercice - DAO', 'Prix Soumissionnaire (HT)', 'Prix Maître d\'ouvrage', 'Société']);
-                    
-                    // Données
-                    for (let i = 0; i < currentChartData.labels.length; i++) {
-                        worksheetData.push([
-                            currentChartData.labels[i],
-                            currentChartData.soumissionnairePrices[i],
-                            currentChartData.maitreOuvragePrices[i],
-                            currentChartData.soumissionnaires[i]
-                        ]);
+                    ],
+                    styles: {
+                        header: {
+                            fontSize: 18,
+                            bold: true,
+                            alignment: 'center'
+                        },
+                        subheader: {
+                            fontSize: 14,
+                            bold: true,
+                            margin: [0, 10, 0, 5]
+                        }
+                    },
+                    defaultStyle: {
+                        fontSize: 10,
+                        font: 'Times'
                     }
-                    
-                    const worksheet = XLSX.utils.aoa_to_sheet(worksheetData);
-                    const workbook = XLSX.utils.book_new();
-                    XLSX.utils.book_append_sheet(workbook, worksheet, 'Données Graphique');
-                    
-                    XLSX.writeFile(workbook, `donnees_graphique_${currentChartData.searchTerm}.xlsx`);
-                    showStatus('Données du graphique exportées en Excel avec succès!', true);
-                } catch (error) {
-                    console.error("Erreur lors de l'export Excel du graphique:", error);
-                    showStatus('Erreur lors de l\'export Excel du graphique: ' + error.message, false);
+                };
+                
+                pdfMake.createPdf(docDefinition).download(`graphique_${currentChartData.searchTerm}.pdf`);
+                showStatus('Graphique exporté en PDF avec succès!', true);
+                hideExportChartPopup();
+            } catch (error) {
+                console.error("Erreur lors de l'export PDF du graphique:", error);
+                showStatus('Erreur lors de l\'export PDF du graphique: ' + error.message, false);
+            }
+        }
+
+        // Exporter le graphique en Excel
+        function exportChartToExcel() {
+            try {
+                const worksheetData = [];
+                
+                // En-têtes
+                worksheetData.push(['Exercice - DAO', 'Prix Soumissionnaire (HT)', 'Prix Maître d\'ouvrage', 'Société']);
+                
+                // Données
+                for (let i = 0; i < currentChartData.labels.length; i++) {
+                    worksheetData.push([
+                        currentChartData.labels[i],
+                        currentChartData.soumissionnairePrices[i],
+                        currentChartData.maitreOuvragePrices[i],
+                        currentChartData.soumissionnaires[i]
+                    ]);
                 }
+                
+                const worksheet = XLSX.utils.aoa_to_sheet(worksheetData);
+                const workbook = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(workbook, worksheet, 'Données Graphique');
+                
+                XLSX.writeFile(workbook, `donnees_graphique_${currentChartData.searchTerm}.xlsx`);
+                showStatus('Données du graphique exportées en Excel avec succès!', true);
+                hideExportChartPopup();
+            } catch (error) {
+                console.error("Erreur lors de l'export Excel du graphique:", error);
+                showStatus('Erreur lors de l\'export Excel du graphique: ' + error.message, false);
             }
         }
     </script>
